@@ -1,0 +1,12 @@
+# Environment variables
+.env
+
+# SQLite database
+*.db
+
+# Go build artifacts
+*.exe
+*.out
+
+# OS junk
+.DS_Store
