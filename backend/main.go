@@ -40,7 +40,13 @@ func main() {
 		})
 	})
 
-	r.POST("/user", handlers.CreateUserHandler(db))
+	r.POST("/users", handlers.CreateUserHandler(db))
+
+	r.GET("/users/:id", handlers.ReadUserByIDHandler(db))
+
+	r.PATCH("/users/:id", handlers.UpdateUserByIDHandler(db))
+
+	r.DELETE("/users/:id", handlers.DeleteUserByIDHandler(db))
 
 	r.Run(":8080")
 }
