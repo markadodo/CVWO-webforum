@@ -37,13 +37,17 @@ func CreateUser(db *sql.DB, user *models.User) error {
 		user.LastActive,
 	)
 
+	if err != nil {
+		return err
+	}
+
 	id, _ := result.LastInsertId()
 
 	user.ID = id
 	user.Password = ""
 	user.PasswordHash = ""
 
-	return err
+	return nil
 }
 
 func ReadUserByID(db *sql.DB, id int64) (*models.User, error) {

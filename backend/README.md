@@ -16,7 +16,6 @@ Data models:
     - topic description
     - created by(ownership)
     - created at
-    - tags
 
     post:
     - post id
@@ -26,8 +25,6 @@ Data models:
     - post status(likes, dislikes, edited?, views, popularity)
     - created by
     - created at
-    - tags
-    - attachments?
 
     comment:
     - comment id

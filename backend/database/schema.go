@@ -22,7 +22,6 @@ func InitDB(db *sql.DB) error {
 		description TEXT NOT NULL,
 		created_by INTEGER NOT NULL,
 		created_at DATETIME NOT NULL,
-		tags TEXT,
 		FOREIGN KEY (created_by) REFERENCES users(id)
 		);
 	`
@@ -39,7 +38,6 @@ func InitDB(db *sql.DB) error {
 		popularity INTEGER NOT NULL DEFAULT 0,
 		created_by INTEGER NOT NULL,
 		created_at DATETIME NOT NULL,
-		tags TEXT,
 		FOREIGN KEY (topic_id) REFERENCES topics(id),
 		FOREIGN KEY (created_by) REFERENCES users(id)
         );
