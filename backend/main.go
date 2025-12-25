@@ -56,5 +56,13 @@ func main() {
 
 	r.DELETE("/topics/:id", handlers.DeleteTopicByIDHandler(db))
 
+	r.POST("/posts", handlers.CreatePostHandler(db))
+
+	r.GET("/posts/:id", handlers.ReadPostByIDHandler(db))
+
+	r.PATCH("/posts/:id", handlers.UpdatePostByIDHandler(db))
+
+	r.DELETE("/posts/:id", handlers.DeletePostByIDHandler(db))
+
 	r.Run(":8080")
 }
