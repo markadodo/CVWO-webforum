@@ -64,5 +64,13 @@ func main() {
 
 	r.DELETE("/posts/:id", handlers.DeletePostByIDHandler(db))
 
+	r.POST("/comments", handlers.CreateCommentHandler(db))
+
+	r.GET("/comments/:id", handlers.ReadCommentByIDHandler(db))
+
+	r.PATCH("/comments/:id", handlers.UpdateCommentByIDHandler(db))
+
+	r.DELETE("/comments/:id", handlers.DeleteCommentByIDHandler(db))
+
 	r.Run(":8080")
 }

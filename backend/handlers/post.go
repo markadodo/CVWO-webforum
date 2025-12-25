@@ -74,7 +74,7 @@ func ReadPostByIDHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		c.JSON(201, gin.H{
+		c.JSON(200, gin.H{
 			"id":          post.ID,
 			"title":       post.Title,
 			"description": post.Description,
