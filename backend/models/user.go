@@ -21,3 +21,8 @@ type UpdateUserInput struct {
 	Password   *string    `json:"password"`
 	LastActive *time.Time `json:"last_active"`
 }
+
+type LoginUserData struct {
+	Password string `json:"password"`
+	Username string `json:"username"`
+}

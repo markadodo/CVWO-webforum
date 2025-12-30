@@ -107,3 +107,17 @@ func DeleteTopicByID(db *sql.DB, id int64) (bool, error) {
 
 	return false, nil
 }
+
+func GetTopicOwnerByID(db *sql.DB, topicID int64) (int64, error) {
+	topicData, err := ReadTopicByID(db, topicID)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if topicData == nil {
+		return 0, nil
+	}
+
+	return topicData.CreatedBy, err
+}

@@ -6,12 +6,12 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"log"
-	"net/http"
 
 	"fmt"
 
 	"backend/database"
 	"backend/handlers"
+	"backend/middleware"
 )
 
 func main() {
@@ -32,45 +32,46 @@ func main() {
 
 	fmt.Println("db created")
 
-	r := gin.Default()
+	test := gin.Default()
 
-	r.GET("/testing", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{
-			"status": "ok",
-		})
-	})
+	test.POST("/login", handlers.LoginHandler(db))
 
-	r.POST("/users", handlers.CreateUserHandler(db))
+	r := test.Group("/logged_in")
 
-	r.GET("/users/:id", handlers.ReadUserByIDHandler(db))
+	r.Use(middleware.JWTAuthorisation())
+	{
+		r.POST("/users", handlers.CreateUserHandler(db))
 
-	r.PATCH("/users/:id", handlers.UpdateUserByIDHandler(db))
+		r.GET("/users/:id", middleware.CheckOwnershipByID(db, database.GetUserOwnerByID), handlers.ReadUserByIDHandler(db))
 
-	r.DELETE("/users/:id", handlers.DeleteUserByIDHandler(db))
+		r.PATCH("/users/:id", handlers.UpdateUserByIDHandler(db))
 
-	r.POST("/topics", handlers.CreateTopicHandler(db))
+		r.DELETE("/users/:id", handlers.DeleteUserByIDHandler(db))
 
-	r.GET("/topics/:id", handlers.ReadTopicByIDHandler(db))
+		r.POST("/topics", handlers.CreateTopicHandler(db))
 
-	r.PATCH("/topics/:id", handlers.UpdateTopicByIDHandler(db))
+		r.GET("/topics/:id", middleware.CheckOwnershipByID(db, database.GetTopicOwnerByID), handlers.ReadTopicByIDHandler(db))
 
-	r.DELETE("/topics/:id", handlers.DeleteTopicByIDHandler(db))
+		r.PATCH("/topics/:id", handlers.UpdateTopicByIDHandler(db))
 
-	r.POST("/posts", handlers.CreatePostHandler(db))
+		r.DELETE("/topics/:id", handlers.DeleteTopicByIDHandler(db))
 
-	r.GET("/posts/:id", handlers.ReadPostByIDHandler(db))
+		r.POST("/posts", handlers.CreatePostHandler(db))
 
-	r.PATCH("/posts/:id", handlers.UpdatePostByIDHandler(db))
+		r.GET("/posts/:id", handlers.ReadPostByIDHandler(db))
 
-	r.DELETE("/posts/:id", handlers.DeletePostByIDHandler(db))
+		r.PATCH("/posts/:id", handlers.UpdatePostByIDHandler(db))
 
-	r.POST("/comments", handlers.CreateCommentHandler(db))
+		r.DELETE("/posts/:id", handlers.DeletePostByIDHandler(db))
 
-	r.GET("/comments/:id", handlers.ReadCommentByIDHandler(db))
+		r.POST("/comments", handlers.CreateCommentHandler(db))
 
-	r.PATCH("/comments/:id", handlers.UpdateCommentByIDHandler(db))
+		r.GET("/comments/:id", handlers.ReadCommentByIDHandler(db))
 
-	r.DELETE("/comments/:id", handlers.DeleteCommentByIDHandler(db))
+		r.PATCH("/comments/:id", handlers.UpdateCommentByIDHandler(db))
 
-	r.Run(":8080")
+		r.DELETE("/comments/:id", handlers.DeleteCommentByIDHandler(db))
+	}
+
+	test.Run(":8080")
 }

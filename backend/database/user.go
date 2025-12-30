@@ -71,6 +71,27 @@ func ReadUserByID(db *sql.DB, id int64) (*models.User, error) {
 	return &user, nil
 }
 
+func ReadUserByUsername(db *sql.DB, username string) (*models.User, error) {
+	user := models.User{}
+
+	query := `
+	SELECT id, username, password_hash, created_at, last_active
+	FROM users
+	WHERE username = ?
+	`
+	err := db.QueryRow(query, username).Scan(&user.ID, &user.Username, &user.PasswordHash, &user.CreatedAt, &user.LastActive)
+
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &user, nil
+}
+
 func UpdateUserByID(db *sql.DB, id int64, input *models.UpdateUserInput) (bool, bool, error) {
 	updates := []string{}
 	args := []interface{}{}
@@ -127,4 +148,8 @@ func DeleteUserByID(db *sql.DB, id int64) (bool, error) {
 	}
 
 	return false, nil
+}
+
+func GetUserOwnerByID(db *sql.DB, userID int64) (int64, error) {
+	return userID, nil
 }

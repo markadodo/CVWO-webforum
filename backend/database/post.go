@@ -134,3 +134,17 @@ func DeletePostByID(db *sql.DB, id int64) (bool, error) {
 
 	return false, nil
 }
+
+func GetPostOwnerByID(db *sql.DB, postID int64) (int64, error) {
+	postData, err := ReadPostByID(db, postID)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if postData == nil {
+		return 0, nil
+	}
+
+	return postData.CreatedBy, err
+}

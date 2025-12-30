@@ -119,3 +119,17 @@ func DeleteCommentByID(db *sql.DB, id int64) (bool, error) {
 
 	return false, nil
 }
+
+func GetCommentOwnerByID(db *sql.DB, commentID int64) (int64, error) {
+	commentData, err := ReadCommentByID(db, commentID)
+
+	if err != nil {
+		return 0, err
+	}
+
+	if commentData == nil {
+		return 0, nil
+	}
+
+	return commentData.CreatedBy, err
+}
