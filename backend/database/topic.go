@@ -121,3 +121,46 @@ func GetTopicOwnerByID(db *sql.DB, topicID int64) (int64, error) {
 
 	return topicData.CreatedBy, err
 }
+
+func ReadTopicBySearchQuery(db *sql.DB, limit int, offset int, sortBy string, order string, searchQuery string) ([]models.Topic, error) {
+	var topics []models.Topic
+	args := []interface{}{searchQuery}
+
+	query := `
+	SELECT topics.*
+	FROM topics
+	JOIN topics_fts ON topics.id = topics_fts.rowid
+	WHERE topics_fts MATCH ?
+	`
+
+	if sortBy == "relevance" {
+		sortBy = "bm25(topics_fts)"
+	}
+
+	query = query + " ORDER BY " + sortBy + " " + order + " LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := db.Query(query, args...)
+
+	if err != nil {
+		return topics, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var topic models.Topic
+
+		if err := rows.Scan(&topic.ID, &topic.Title, &topic.Description, &topic.CreatedBy, &topic.CreatedAt); err != nil {
+			return topics, err
+		}
+
+		topics = append(topics, topic)
+	}
+
+	if err := rows.Err(); err != nil {
+		return topics, err
+	}
+
+	return topics, nil
+}

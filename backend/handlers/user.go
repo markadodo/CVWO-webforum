@@ -43,7 +43,7 @@ func CreateUserHandler(db *sql.DB) gin.HandlerFunc {
 
 func ReadUserByIDHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		strid := c.Param("id")
+		strid := c.Param("user_id")
 		id, err := strconv.ParseInt(strid, 10, 64)
 
 		if err != nil {
@@ -74,10 +74,10 @@ func ReadUserByIDHandler(db *sql.DB) gin.HandlerFunc {
 
 func UpdateUserByIDHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		strid := c.Param("id")
+		strid := c.Param("user_id")
 		id, err := strconv.ParseInt(strid, 10, 64)
 		if err != nil {
-			c.JSON(404, gin.H{"error": "Invalid ID"})
+			c.JSON(400, gin.H{"error": "Invalid ID"})
 			return
 		}
 
@@ -121,7 +121,7 @@ func UpdateUserByIDHandler(db *sql.DB) gin.HandlerFunc {
 
 func DeleteUserByIDHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		strid := c.Param("id")
+		strid := c.Param("user_id")
 		id, err := strconv.ParseInt(strid, 10, 64)
 
 		if err != nil {

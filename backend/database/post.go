@@ -3,6 +3,8 @@ package database
 import (
 	"backend/models"
 	"database/sql"
+	"errors"
+	"log"
 	"strings"
 	"time"
 )
@@ -147,4 +149,131 @@ func GetPostOwnerByID(db *sql.DB, postID int64) (int64, error) {
 	}
 
 	return postData.CreatedBy, err
+}
+
+func ReadPostByTopicID(db *sql.DB, topicID int64, limit int, offset int, sortBy string, order string) ([]models.Post, error) {
+	var posts []models.Post
+
+	query := `
+	SELECT * FROM posts
+	WHERE topic_id = ?
+	ORDER BY ` + sortBy + " " + order + `
+	LIMIT ? OFFSET ?`
+
+	rows, err := db.Query(
+		query,
+		topicID,
+		limit,
+		offset,
+	)
+
+	if err != nil {
+		return posts, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var post models.Post
+
+		if err := rows.Scan(&post.ID, &post.Title, &post.Description, &post.TopicID, &post.Likes, &post.Dislikes, &post.IsEdited, &post.Views, &post.Popularity, &post.CreatedBy, &post.CreatedAt); err != nil {
+			return posts, err
+		}
+
+		posts = append(posts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		return posts, err
+	}
+
+	return posts, nil
+}
+
+func ReadPostBySearchQuery(db *sql.DB, topicID int64, limit int, offset int, sortBy string, order string, searchQuery string) ([]models.Post, error) {
+	var posts []models.Post
+	args := []interface{}{searchQuery}
+
+	query := `
+	SELECT posts.*
+	FROM posts
+	JOIN posts_fts ON posts.id = posts_fts.rowid
+	WHERE posts_fts MATCH ?
+	`
+
+	if topicID != 0 {
+		query = query + " AND posts.topic_id = ?"
+		args = append(args, topicID)
+	}
+
+	if sortBy == "relevance" {
+		sortBy = "bm25(posts_fts)"
+	}
+
+	query = query + " ORDER BY " + sortBy + " " + order + " LIMIT ? OFFSET ?"
+	args = append(args, limit, offset)
+
+	rows, err := db.Query(query, args...)
+
+	if err != nil {
+		return posts, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var post models.Post
+
+		if err := rows.Scan(&post.ID, &post.Title, &post.Description, &post.TopicID, &post.Likes, &post.Dislikes, &post.IsEdited, &post.Views, &post.Popularity, &post.CreatedBy, &post.CreatedAt); err != nil {
+			return posts, err
+		}
+
+		posts = append(posts, post)
+	}
+
+	if err := rows.Err(); err != nil {
+		return posts, err
+	}
+
+	return posts, nil
+}
+
+var ErrDuplicatePostReaction = errors.New("reaction already exists")
+
+func CreatePostReaction(db *sql.DB, input *models.PostReaction) error {
+	query := `
+	INSERT INTO posts_reactions (
+		post_id,
+		user_id,
+		reaction
+	)
+	VALUES (?, ?, ?);
+	`
+
+	_, err := db.Exec(query, input.PostID, input.UserID, input.Reaction)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return ErrDuplicatePostReaction
+		}
+		log.Println(err)
+		return err
+	}
+
+	return nil
+}
+
+func DeletePostReactionByPostIDAndUserID(db *sql.DB, postID int64, userID int64) (bool, error) {
+	query := "DELETE FROM posts_reactions WHERE post_id = ? AND user_id = ?"
+	res, err := db.Exec(query, postID, userID)
+
+	if err != nil {
+		return false, err
+	}
+
+	if count, _ := res.RowsAffected(); count == 0 {
+		return true, nil
+	}
+
+	return false, nil
 }

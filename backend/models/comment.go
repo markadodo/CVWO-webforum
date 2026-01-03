@@ -27,3 +27,14 @@ type UpdateCommentInput struct {
 	Dislikes    *int    `json:"dislikes"`
 	IsEdited    *int    `json:"is_edited"`
 }
+
+type CommentReaction struct {
+	ID        int64 `json:"id"`
+	CommentID int64 `json:"comment_id"`
+	UserID    int64 `json:"user_id"`
+	Reaction  bool  `json:"reaction"`
+}
+
+type CreateCommentReactionInput struct {
+	Reaction bool `json:"reaction"`
+}

@@ -34,3 +34,5 @@ Data models:
     - parent comment id
     - created by
     - created at
+
+    logged_in/topic/:topic_id/post/:post_id/

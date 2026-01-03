@@ -4,6 +4,7 @@ import (
 	"backend/database"
 	"backend/models"
 	"database/sql"
+	"strings"
 
 	"strconv"
 
@@ -47,7 +48,7 @@ func CreateTopicHandler(db *sql.DB) gin.HandlerFunc {
 
 func ReadTopicByIDHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		strid := c.Param("id")
+		strid := c.Param("topic_id")
 		id, err := strconv.ParseInt(strid, 10, 64)
 
 		if err != nil {
@@ -79,10 +80,10 @@ func ReadTopicByIDHandler(db *sql.DB) gin.HandlerFunc {
 
 func UpdateTopicByIDHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		strid := c.Param("id")
+		strid := c.Param("topic_id")
 		id, err := strconv.ParseInt(strid, 10, 64)
 		if err != nil {
-			c.JSON(404, gin.H{"error": "Invalid ID"})
+			c.JSON(400, gin.H{"error": "Invalid ID"})
 			return
 		}
 
@@ -125,7 +126,7 @@ func UpdateTopicByIDHandler(db *sql.DB) gin.HandlerFunc {
 
 func DeleteTopicByIDHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		strid := c.Param("id")
+		strid := c.Param("topic_id")
 		id, err := strconv.ParseInt(strid, 10, 64)
 
 		if err != nil {
@@ -146,5 +147,82 @@ func DeleteTopicByIDHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(200, gin.H{"status": "Topic deleted"})
+	}
+}
+
+func ReadTopicBySearchQueryHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		pageStr := c.DefaultQuery("page", "1")
+		limitStr := c.DefaultQuery("limit", "10")
+
+		page, err := strconv.Atoi(pageStr)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid page"})
+			return
+		}
+
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid limit"})
+			return
+		}
+
+		if page <= 0 {
+			page = 1
+		}
+
+		if limit < 10 || limit >= 100 {
+			limit = 10
+		}
+
+		offset := (page - 1) * limit
+
+		sortBy := c.DefaultQuery("sort_by", "created_at")
+		order := c.DefaultQuery("order", "DESC")
+
+		if sortBy != "created_at" && sortBy != "relevance" {
+			sortBy = "created_at"
+		}
+
+		if order != "ASC" && order != "DESC" {
+			order = "DESC"
+		}
+
+		searchQuery := c.DefaultQuery("q", "")
+		searchQuery = strings.TrimSpace(searchQuery)
+		if searchQuery == "" {
+			c.JSON(400, gin.H{"error": "Query cannot be empty"})
+			return
+		}
+
+		topicsData, err := database.ReadTopicBySearchQuery(db, limit, offset, sortBy, order, searchQuery)
+
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		if len(topicsData) == 0 {
+			c.JSON(200, gin.H{
+				"count":        0,
+				"page":         page,
+				"limit":        limit,
+				"sort_by":      sortBy,
+				"order":        order,
+				"search_query": searchQuery,
+				"topics":       []models.Topic{},
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"count":        len(topicsData),
+			"page":         page,
+			"limit":        limit,
+			"sort_by":      sortBy,
+			"order":        order,
+			"search_query": searchQuery,
+			"topics":       topicsData,
+		})
 	}
 }

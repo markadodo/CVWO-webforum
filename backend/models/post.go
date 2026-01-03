@@ -32,3 +32,14 @@ type UpdatePostInput struct {
 	Views       *int    `json:"views"`
 	Popularity  *int    `json:"popularity"`
 }
+
+type PostReaction struct {
+	ID       int64 `json:"id"`
+	PostID   int64 `json:"post_id"`
+	UserID   int64 `json:"user_id"`
+	Reaction bool  `json:"reaction"`
+}
+
+type CreatePostReactionInput struct {
+	Reaction bool `json:"reaction"`
+}

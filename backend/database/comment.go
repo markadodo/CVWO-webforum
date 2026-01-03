@@ -3,6 +3,7 @@ package database
 import (
 	"backend/models"
 	"database/sql"
+	"errors"
 	"strings"
 	"time"
 )
@@ -132,4 +133,81 @@ func GetCommentOwnerByID(db *sql.DB, commentID int64) (int64, error) {
 	}
 
 	return commentData.CreatedBy, err
+}
+
+func ReadCommentByPostID(db *sql.DB, postID int64, limit int, offset int, sortBy string, order string) ([]models.Comment, error) {
+	var comments []models.Comment
+
+	query := `
+	SELECT * FROM comments
+	WHERE post_id = ?
+	ORDER BY ` + sortBy + " " + order + `
+	LIMIT ? OFFSET ?`
+
+	rows, err := db.Query(
+		query,
+		postID,
+		limit,
+		offset,
+	)
+
+	if err != nil {
+		return comments, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var comment models.Comment
+
+		if err := rows.Scan(&comment.ID, &comment.Description, &comment.Likes, &comment.Dislikes, &comment.IsEdited, &comment.PostID, &comment.ParentCommentID, &comment.CreatedBy, &comment.CreatedAt); err != nil {
+			return comments, err
+		}
+
+		comments = append(comments, comment)
+	}
+
+	if err := rows.Err(); err != nil {
+		return comments, err
+	}
+
+	return comments, nil
+}
+
+var ErrDuplicateCommentReaction = errors.New("reaction already exists")
+
+func CreateCommentReaction(db *sql.DB, input *models.CommentReaction) error {
+	query := `
+	INSERT INTO comments_reactions (
+		comment_id,
+		user_id,
+		reaction
+	)
+	VALUES (?, ?, ?);
+	`
+	_, err := db.Exec(query, input.CommentID, input.UserID, input.Reaction)
+
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+			return ErrDuplicateCommentReaction
+		}
+		return err
+	}
+
+	return nil
+}
+
+func DeleteCommentReactionByCommentIDAndUserID(db *sql.DB, commentID int64, userID int64) (bool, error) {
+	query := "DELETE FROM comments_reactions WHERE comment_id = ? AND user_id = ?"
+	res, err := db.Exec(query, commentID, userID)
+
+	if err != nil {
+		return false, err
+	}
+
+	if count, _ := res.RowsAffected(); count == 0 {
+		return true, nil
+	}
+
+	return false, nil
 }

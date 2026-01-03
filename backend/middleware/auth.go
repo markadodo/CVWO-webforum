@@ -50,7 +50,23 @@ type resourceFetcher func(*sql.DB, int64) (int64, error)
 
 func CheckOwnershipByID(db *sql.DB, fetcher resourceFetcher) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		resourceIDStr := c.Param("id")
+
+		commentID := c.Param("comment_id")
+		postID := c.Param("post_id")
+		topicID := c.Param("topic_id")
+		userID := c.Param("user_id")
+
+		resourceIDStr := ""
+
+		if commentID != "" {
+			resourceIDStr = commentID
+		} else if postID != "" {
+			resourceIDStr = postID
+		} else if topicID != "" {
+			resourceIDStr = topicID
+		} else if userID != "" {
+			resourceIDStr = userID
+		}
 
 		resourceID, err := strconv.ParseInt(resourceIDStr, 10, 64)
 
@@ -74,7 +90,7 @@ func CheckOwnershipByID(db *sql.DB, fetcher resourceFetcher) gin.HandlerFunc {
 			return
 		}
 
-		currentUserID, exists := c.Get("user_id")
+		currentUserIDVal, exists := c.Get("user_id")
 
 		if !exists {
 			c.JSON(401, gin.H{"error": "Not logged in"})
@@ -82,7 +98,7 @@ func CheckOwnershipByID(db *sql.DB, fetcher resourceFetcher) gin.HandlerFunc {
 			return
 		}
 
-		currentUserID, match := currentUserID.(int64)
+		currentUserID, match := currentUserIDVal.(int64)
 
 		if !match {
 			c.JSON(401, gin.H{"error": "Invalid user ID"})
