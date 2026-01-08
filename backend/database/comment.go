@@ -106,8 +106,14 @@ func UpdateCommentByID(db *sql.DB, id int64, input *models.UpdateCommentInput) (
 	return false, false, nil
 }
 
+// soft deletion of comment by setting description field to null
 func DeleteCommentByID(db *sql.DB, id int64) (bool, error) {
-	query := "DELETE FROM comments WHERE id = ?"
+	query := `
+	UPDATE comments SET
+		description = ""
+	WHERE id = ?
+	`
+
 	res, err := db.Exec(query, id)
 
 	if err != nil {

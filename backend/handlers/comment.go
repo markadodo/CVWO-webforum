@@ -112,6 +112,24 @@ func UpdateCommentByIDHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		comment, err := database.ReadCommentByID(db, id)
+
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		if comment == nil {
+			c.JSON(404, gin.H{"error": "Comment not found"})
+			return
+		}
+
+		// Description == "" indicates soft-deleted comment
+		if comment.Description == "" {
+			c.JSON(403, gin.H{"error": "Update on deleted comment is not allowed"})
+			return
+		}
+
 		var input models.UpdateCommentInput
 
 		if err := c.ShouldBindJSON(&input); err != nil {
@@ -260,6 +278,24 @@ func CreateCommentReactionHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
+		comment, err := database.ReadCommentByID(db, commentID)
+
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		if comment == nil {
+			c.JSON(404, gin.H{"error": "Comment not found"})
+			return
+		}
+
+		// Description == "" indicates soft-deleted comment
+		if comment.Description == "" {
+			c.JSON(403, gin.H{"error": "Reaction to deleted comment is not allowed"})
+			return
+		}
+
 		userIDVal, exists := c.Get("user_id")
 
 		if !exists {
@@ -313,6 +349,24 @@ func DeleteCommentReactionHandler(db *sql.DB) gin.HandlerFunc {
 
 		if commentID <= 0 {
 			c.JSON(400, gin.H{"error": "Invalid comment ID"})
+			return
+		}
+
+		comment, err := database.ReadCommentByID(db, commentID)
+
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		if comment == nil {
+			c.JSON(404, gin.H{"error": "Comment not found"})
+			return
+		}
+
+		// Description == "" indicates soft-deleted comment
+		if comment.Description == "" {
+			c.JSON(403, gin.H{"error": "Reaction to deleted comment is not allowed"})
 			return
 		}
 
