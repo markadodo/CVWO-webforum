@@ -2,14 +2,15 @@ package database
 
 import (
 	"database/sql"
+	"os"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 )
 
 // establish connection to the database
 func ConnectDB() (*sql.DB, error) {
-
-	db, err := sql.Open("sqlite3", "./database/forum.db")
+	connection := os.Getenv("DATABASE_URL")
+	db, err := sql.Open("postgres", connection)
 	if err != nil {
 		return nil, err
 	} else {

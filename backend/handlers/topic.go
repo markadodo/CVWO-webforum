@@ -226,3 +226,71 @@ func ReadTopicBySearchQueryHandler(db *sql.DB) gin.HandlerFunc {
 		})
 	}
 }
+
+func ReadTopicHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		pageStr := c.DefaultQuery("page", "1")
+		limitStr := c.DefaultQuery("limit", "10")
+
+		page, err := strconv.Atoi(pageStr)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid page"})
+			return
+		}
+
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid limit"})
+			return
+		}
+
+		if page <= 0 {
+			page = 1
+		}
+
+		if limit < 10 || limit >= 100 {
+			limit = 10
+		}
+
+		offset := (page - 1) * limit
+
+		sortBy := c.DefaultQuery("sort_by", "created_at")
+		order := c.DefaultQuery("order", "DESC")
+
+		if sortBy != "created_at" {
+			sortBy = "created_at"
+		}
+
+		if order != "ASC" && order != "DESC" {
+			order = "DESC"
+		}
+
+		topicsData, err := database.ReadTopic(db, limit, offset, sortBy, order)
+
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		if len(topicsData) == 0 {
+			c.JSON(200, gin.H{
+				"count":   0,
+				"page":    page,
+				"limit":   limit,
+				"sort_by": sortBy,
+				"order":   order,
+				"topics":  []models.Topic{},
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"count":   len(topicsData),
+			"page":    page,
+			"limit":   limit,
+			"sort_by": sortBy,
+			"order":   order,
+			"topics":  topicsData,
+		})
+	}
+}

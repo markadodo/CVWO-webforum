@@ -4,6 +4,7 @@ import (
 	"backend/models"
 	"database/sql"
 	"errors"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -20,9 +21,9 @@ func CreateComment(db *sql.DB, comment *models.Comment) error {
 		created_by,
 		created_at
 	)
-	VALUES (?, ?, ?, ?, ?);
+	VALUES ($1, $2, $3, $4, $5);
 	`
-	result, err := db.Exec(
+	_, err := db.Exec(
 		query,
 		comment.Description,
 		comment.PostID,
@@ -35,10 +36,6 @@ func CreateComment(db *sql.DB, comment *models.Comment) error {
 		return err
 	}
 
-	id, _ := result.LastInsertId()
-
-	comment.ID = id
-
 	return nil
 }
 
@@ -48,7 +45,7 @@ func ReadCommentByID(db *sql.DB, id int64) (*models.Comment, error) {
 	query := `
 	SELECT id, description, likes, dislikes, is_edited, post_id, parent_comment_id, created_by, created_at
 	FROM comments
-	WHERE id = ?
+	WHERE id = $1
 	`
 	err := db.QueryRow(query, id).Scan(&comment.ID, &comment.Description, &comment.Likes, &comment.Dislikes, &comment.IsEdited, &comment.PostID, &comment.ParentCommentID, &comment.CreatedBy, &comment.CreatedAt)
 
@@ -66,32 +63,37 @@ func ReadCommentByID(db *sql.DB, id int64) (*models.Comment, error) {
 func UpdateCommentByID(db *sql.DB, id int64, input *models.UpdateCommentInput) (bool, bool, error) {
 	updates := []string{}
 	args := []interface{}{}
+	counter := 1
 
 	if input.Description != nil {
-		updates = append(updates, "description = ?")
+		updates = append(updates, "description = $"+strconv.Itoa(counter))
 		args = append(args, *input.Description)
+		counter += 1
 	}
 
 	if input.Likes != nil {
-		updates = append(updates, "likes = ?")
+		updates = append(updates, "likes = $"+strconv.Itoa(counter))
 		args = append(args, *input.Likes)
+		counter += 1
 	}
 
 	if input.Dislikes != nil {
-		updates = append(updates, "dislikes = ?")
+		updates = append(updates, "dislikes = $"+strconv.Itoa(counter))
 		args = append(args, *input.Dislikes)
+		counter += 1
 	}
 
 	if input.IsEdited != nil {
-		updates = append(updates, "is_edited = ?")
+		updates = append(updates, "is_edited = $"+strconv.Itoa(counter))
 		args = append(args, *input.IsEdited)
+		counter += 1
 	}
 
 	if len(updates) == 0 {
 		return true, false, nil
 	}
 
-	query := "UPDATE comments SET " + strings.Join(updates, ", ") + " WHERE id = ?"
+	query := "UPDATE comments SET " + strings.Join(updates, ", ") + " WHERE id = $" + strconv.Itoa(counter)
 	args = append(args, id)
 	res, err := db.Exec(query, args...)
 
@@ -106,12 +108,12 @@ func UpdateCommentByID(db *sql.DB, id int64, input *models.UpdateCommentInput) (
 	return false, false, nil
 }
 
-// soft deletion of comment by setting description field to null
+// soft deletion of comment by setting description field to empty string
 func DeleteCommentByID(db *sql.DB, id int64) (bool, error) {
 	query := `
 	UPDATE comments SET
-		description = ""
-	WHERE id = ?
+		description = ''
+	WHERE id = $1
 	`
 
 	res, err := db.Exec(query, id)
@@ -145,10 +147,11 @@ func ReadCommentByPostID(db *sql.DB, postID int64, limit int, offset int, sortBy
 	var comments []models.Comment
 
 	query := `
-	SELECT * FROM comments
-	WHERE post_id = ?
+	SELECT id, description, likes, dislikes, is_edited, post_id, parent_comment_id, created_by, created_at
+	FROM comments
+	WHERE post_id = $1
 	ORDER BY ` + sortBy + " " + order + `
-	LIMIT ? OFFSET ?`
+	LIMIT $2 OFFSET $3`
 
 	rows, err := db.Query(
 		query,
@@ -189,12 +192,12 @@ func CreateCommentReaction(db *sql.DB, input *models.CommentReaction) error {
 		user_id,
 		reaction
 	)
-	VALUES (?, ?, ?);
+	VALUES ($1, $2, $3);
 	`
 	_, err := db.Exec(query, input.CommentID, input.UserID, input.Reaction)
 
 	if err != nil {
-		if strings.Contains(err.Error(), "UNIQUE constraint failed") {
+		if strings.Contains(err.Error(), "duplicate key value violates unique constraint") {
 			return ErrDuplicateCommentReaction
 		}
 		return err
@@ -204,7 +207,7 @@ func CreateCommentReaction(db *sql.DB, input *models.CommentReaction) error {
 }
 
 func DeleteCommentReactionByCommentIDAndUserID(db *sql.DB, commentID int64, userID int64) (bool, error) {
-	query := "DELETE FROM comments_reactions WHERE comment_id = ? AND user_id = ?"
+	query := "DELETE FROM comments_reactions WHERE comment_id = $1 AND user_id = $2"
 	res, err := db.Exec(query, commentID, userID)
 
 	if err != nil {

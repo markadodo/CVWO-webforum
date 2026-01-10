@@ -3,6 +3,7 @@ package database
 import (
 	"backend/models"
 	"database/sql"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -18,9 +19,9 @@ func CreateTopic(db *sql.DB, topic *models.Topic) error {
 		created_by,
 		created_at
 	)
-	VALUES (?, ?, ?, ?);
+	VALUES ($1, $2, $3, $4);
 	`
-	result, err := db.Exec(
+	_, err := db.Exec(
 		query,
 		topic.Title,
 		topic.Description,
@@ -32,10 +33,6 @@ func CreateTopic(db *sql.DB, topic *models.Topic) error {
 		return err
 	}
 
-	id, _ := result.LastInsertId()
-
-	topic.ID = id
-
 	return nil
 }
 
@@ -45,7 +42,7 @@ func ReadTopicByID(db *sql.DB, id int64) (*models.Topic, error) {
 	query := `
 	SELECT id, title, description, created_by, created_at
 	FROM topics
-	WHERE id = ?
+	WHERE id = $1
 	`
 	err := db.QueryRow(query, id).Scan(&topic.ID, &topic.Title, &topic.Description, &topic.CreatedBy, &topic.CreatedAt)
 
@@ -63,22 +60,27 @@ func ReadTopicByID(db *sql.DB, id int64) (*models.Topic, error) {
 func UpdateTopicByID(db *sql.DB, id int64, input *models.UpdateTopicInput) (bool, bool, error) {
 	updates := []string{}
 	args := []interface{}{}
+	counter := 1
 
 	if input.Title != nil {
-		updates = append(updates, "title = ?")
+		placeholder := strconv.Itoa(counter)
+		updates = append(updates, "title = $"+placeholder)
 		args = append(args, *input.Title)
+		counter += 1
 	}
 
 	if input.Description != nil {
-		updates = append(updates, "description = ?")
+		placeholder := strconv.Itoa(counter)
+		updates = append(updates, "description = $"+placeholder)
 		args = append(args, *input.Description)
+		counter += 1
 	}
 
 	if len(updates) == 0 {
 		return true, false, nil
 	}
-
-	query := "UPDATE topics SET " + strings.Join(updates, ", ") + " WHERE id = ?"
+	placeholder := strconv.Itoa(counter)
+	query := "UPDATE topics SET " + strings.Join(updates, ", ") + " WHERE id = $" + placeholder
 	args = append(args, id)
 	res, err := db.Exec(query, args...)
 
@@ -94,7 +96,7 @@ func UpdateTopicByID(db *sql.DB, id int64, input *models.UpdateTopicInput) (bool
 }
 
 func DeleteTopicByID(db *sql.DB, id int64) (bool, error) {
-	query := "DELETE FROM topics WHERE id = ?"
+	query := "DELETE FROM topics WHERE id = $1"
 	res, err := db.Exec(query, id)
 
 	if err != nil {
@@ -127,17 +129,53 @@ func ReadTopicBySearchQuery(db *sql.DB, limit int, offset int, sortBy string, or
 	args := []interface{}{searchQuery}
 
 	query := `
-	SELECT topics.*
-	FROM topics
-	JOIN topics_fts ON topics.id = topics_fts.rowid
-	WHERE topics_fts MATCH ?
+	SELECT id, title, description, created_by, created_at
+	FROM topics, plainto_tsquery('english', $1) AS query
+	WHERE document @@ query
 	`
 
 	if sortBy == "relevance" {
-		sortBy = "bm25(topics_fts)"
+		sortBy = "ts_rank(document, query)"
 	}
 
-	query = query + " ORDER BY " + sortBy + " " + order + " LIMIT ? OFFSET ?"
+	query = query + " ORDER BY " + sortBy + " " + order + " LIMIT $2 OFFSET $3"
+	args = append(args, limit, offset)
+
+	rows, err := db.Query(query, args...)
+
+	if err != nil {
+		return topics, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var topic models.Topic
+
+		if err := rows.Scan(&topic.ID, &topic.Title, &topic.Description, &topic.CreatedBy, &topic.CreatedAt); err != nil {
+			return topics, err
+		}
+
+		topics = append(topics, topic)
+	}
+
+	if err := rows.Err(); err != nil {
+		return topics, err
+	}
+
+	return topics, nil
+}
+
+func ReadTopic(db *sql.DB, limit int, offset int, sortBy string, order string) ([]models.Topic, error) {
+	var topics []models.Topic
+	args := []interface{}{}
+
+	query := `
+	SELECT id, title, description, created_by, created_at
+	FROM topics
+	`
+
+	query = query + " ORDER BY " + sortBy + " " + order + " LIMIT $1 OFFSET $2"
 	args = append(args, limit, offset)
 
 	rows, err := db.Query(query, args...)

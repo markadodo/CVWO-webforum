@@ -4,6 +4,7 @@ import (
 	"backend/models"
 	"backend/utils"
 	"database/sql"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -27,9 +28,9 @@ func CreateUser(db *sql.DB, user *models.User) error {
 		created_at,
 		last_active
 	)
-	VALUES (?, ?, ?, ?);
+	VALUES ($1, $2, $3, $4);
 	`
-	result, err := db.Exec(
+	_, err := db.Exec(
 		query,
 		user.Username,
 		user.PasswordHash,
@@ -41,9 +42,6 @@ func CreateUser(db *sql.DB, user *models.User) error {
 		return err
 	}
 
-	id, _ := result.LastInsertId()
-
-	user.ID = id
 	user.Password = ""
 	user.PasswordHash = ""
 
@@ -56,7 +54,7 @@ func ReadUserByID(db *sql.DB, id int64) (*models.User, error) {
 	query := `
 	SELECT id, username, password_hash, created_at, last_active
 	FROM users
-	WHERE id = ?
+	WHERE id = $1
 	`
 	err := db.QueryRow(query, id).Scan(&user.ID, &user.Username, &user.PasswordHash, &user.CreatedAt, &user.LastActive)
 
@@ -77,7 +75,7 @@ func ReadUserByUsername(db *sql.DB, username string) (*models.User, error) {
 	query := `
 	SELECT id, username, password_hash, created_at, last_active
 	FROM users
-	WHERE username = ?
+	WHERE username = $1
 	`
 	err := db.QueryRow(query, username).Scan(&user.ID, &user.Username, &user.PasswordHash, &user.CreatedAt, &user.LastActive)
 
@@ -95,32 +93,39 @@ func ReadUserByUsername(db *sql.DB, username string) (*models.User, error) {
 func UpdateUserByID(db *sql.DB, id int64, input *models.UpdateUserInput) (bool, bool, error) {
 	updates := []string{}
 	args := []interface{}{}
+	counter := 1
 
 	if input.Username != nil {
-		updates = append(updates, "username = ?")
+		placeholder := strconv.Itoa(counter)
+		updates = append(updates, "username = $"+placeholder)
 		args = append(args, *input.Username)
+		counter += 1
 	}
 
 	if input.LastActive != nil {
-		updates = append(updates, "last_active = ?")
+		placeholder := strconv.Itoa(counter)
+		updates = append(updates, "last_active = $"+placeholder)
 		args = append(args, *input.LastActive)
+		counter += 1
 	}
 
 	if input.Password != nil {
-
+		placeholder := strconv.Itoa(counter)
 		hash, err := utils.HashingPassword(*input.Password)
 		if err != nil {
 			return false, false, err
 		}
-		updates = append(updates, "password_hash = ?")
+		updates = append(updates, "password_hash = $"+placeholder)
 		args = append(args, hash)
+		counter += 1
 	}
 
 	if len(updates) == 0 {
 		return true, false, nil
 	}
 
-	query := "UPDATE users SET " + strings.Join(updates, ", ") + " WHERE id = ?"
+	placeholder := strconv.Itoa(counter)
+	query := "UPDATE users SET " + strings.Join(updates, ", ") + " WHERE id = $" + placeholder
 	args = append(args, id)
 	res, err := db.Exec(query, args...)
 
@@ -136,7 +141,7 @@ func UpdateUserByID(db *sql.DB, id int64, input *models.UpdateUserInput) (bool, 
 }
 
 func DeleteUserByID(db *sql.DB, id int64) (bool, error) {
-	query := "DELETE FROM users WHERE id = ?"
+	query := "DELETE FROM users WHERE id = $1"
 	res, err := db.Exec(query, id)
 
 	if err != nil {
