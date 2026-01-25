@@ -116,7 +116,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
 
   
   async function loginHandler(username: string, password: string) {
-    const res = await fetch("http://localhost:8080/public/auth/login", {
+    const res = await fetch(`${apiUrl}/public/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -128,7 +128,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   }
 
   async function registerHandler(username: string, password: string) {
-    const res = await fetch("http://localhost:8080/public/auth/register", {
+    const res = await fetch(`${apiUrl}/public/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password }),
@@ -193,7 +193,7 @@ export default function ClientLayout({ children }: { children: ReactNode }) {
   };
 
   const handleLogout = async () => {
-    await fetch("http://localhost:8080/public/auth/logout", {
+    await fetch(`${apiUrl}/public/auth/logout`, {
       method: "POST",
       credentials: "include",
     });

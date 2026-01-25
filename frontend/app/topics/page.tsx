@@ -44,8 +44,12 @@ type Topic = {
 export default function TopicsPage() {
   const isLoggedIn = useSelector((state: any) => state.auth.isLoggedIn);
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const query = searchParams.get("q");
+  const [query, setQuery] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setQuery(params.get("q"));
+  }, []);
 
   const [topics, setTopics] = useState<Topic[]>([]);
   const [page, setPage] = useState(1);
@@ -67,7 +71,7 @@ export default function TopicsPage() {
     try {
       const path = query ? `/search?page=${page}&q=${query}` : `?page=${page}`;
 
-      const res = await fetch(`http://localhost:8080/public/topics${path}`);
+      const res = await fetch(`${apiUrl}/public/topics${path}`);
       const json = await res.json();
 
       if (json.topics.length === 0) {
@@ -115,7 +119,7 @@ export default function TopicsPage() {
     if (!newTitle || !newDescription) return;
 
     try {
-      const res = await fetch(`http://localhost:8080/logged_in/topics`, {
+      const res = await fetch(`${apiUrl}/logged_in/topics`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -238,7 +242,7 @@ export default function TopicsPage() {
             <Button
               onClick={handleCreateTopic}
               variant="contained"
-              disabled={!isLoggedIn || !newTitle || !newDescription} // disable if not logged in or empty fields
+              disabled={!isLoggedIn || !newTitle || !newDescription}
               sx={{
                 background: !isLoggedIn
                   ? "#ccc"

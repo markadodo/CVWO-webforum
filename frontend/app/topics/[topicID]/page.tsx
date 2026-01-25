@@ -85,13 +85,13 @@ export default function TopicDetailPage() {
 
   const fetchTopic = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/public/topics/${topicID}`, {
+      const res = await fetch(`${apiUrl}/public/topics/${topicID}`, {
         method: "GET",
         credentials: "include"
       });
       const json = await res.json();
       const userRes = await fetch(
-        `http://localhost:8080/public/users/${json.created_by}`,
+        `${apiUrl}/public/users/${json.created_by}`,
         { method: "GET", credentials: "include" }
       );
       const userJson = await userRes.json();
@@ -113,7 +113,7 @@ export default function TopicDetailPage() {
   // Edit topic
   const handleSave = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/logged_in/topics/${topicID}`, {
+      const res = await fetch(`${apiUrl}/logged_in/topics/${topicID}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -135,7 +135,7 @@ export default function TopicDetailPage() {
   const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this topic?")) return;
     try {
-      await fetch(`http://localhost:8080/logged_in/topics/${topicID}`, {
+      await fetch(`${apiUrl}/logged_in/topics/${topicID}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -154,7 +154,7 @@ export default function TopicDetailPage() {
     try {
       const path = query ? `/search?page=${postsPage}&q=${query}&sort_by=${sortBy}`: `?page=${postsPage}&sort_by=${sortBy}`;
       const res = await fetch(
-        `http://localhost:8080/public/topics/${topicID}/posts${path}`
+        `${apiUrl}/public/topics/${topicID}/posts${path}`
       );
       const json = await res.json();
 
@@ -191,7 +191,7 @@ export default function TopicDetailPage() {
 
     setCreatingPost(true);
     try {
-      const res = await fetch(`http://localhost:8080/logged_in/topics/${topicID}/posts`, {
+      const res = await fetch(`${apiUrl}/logged_in/topics/${topicID}/posts`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -237,7 +237,7 @@ export default function TopicDetailPage() {
 
   const handleViewPost = async (postID: number, views: number, likes: number, dislikes: number) => {
     try {
-      await fetch(`http://localhost:8080/public/posts/${postID}`, {
+      await fetch(`${apiUrl}/public/posts/${postID}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 

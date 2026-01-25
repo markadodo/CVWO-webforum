@@ -50,17 +50,23 @@ export default function PostsPage() {
   const [isResetting, setIsResetting] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const searchParams = useSearchParams();
-  const query = searchParams.get("q");
-  const rank = searchParams.get("sort_by") as "popularity" | "recency" | "views";
+  const [query, setQuery] = useState<string | null>(null);
+  const [rank, setRank] = useState<"popularity" | "recency" | "views" | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    setQuery(params.get("q"));
+    const sortParam = params.get("sort_by") as "popularity" | "recency" | "views" | null;
+    if (sortParam) setRank(sortParam);
+  }, []);
 
   const fetchPosts = async () => {
     if (!hasMore || loading) return;
 
     setLoading(true);
     try {
-        const path = query ? `http://localhost:8080/public/topics/0/posts/search?page=${page}&q=${query}&sort_by=${sortBy}` 
-                           : `http://localhost:8080/public/posts?page=${page}&sort_by=${sortBy}`;
+        const path = query ? `${apiUrl}/public/topics/0/posts/search?page=${page}&q=${query}&sort_by=${sortBy}` 
+                           : `${apiUrl}/public/posts?page=${page}&sort_by=${sortBy}`;
         const res = await fetch(
         `${path}`
         );
@@ -114,7 +120,7 @@ export default function PostsPage() {
 
   const handleViewPost = async (postID: number, views: number, likes: number, dislikes: number) => {
     try {
-      await fetch(`http://localhost:8080/public/posts/${postID}`, {
+      await fetch(`${apiUrl}/public/posts/${postID}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 

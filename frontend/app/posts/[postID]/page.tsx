@@ -140,7 +140,7 @@ export default function PostPage() {
     if (!replyText.trim()) return;
 
     try {
-      const res = await fetch("http://localhost:8080/logged_in/comments", {
+      const res = await fetch(`${apiUrl}/logged_in/comments`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -171,7 +171,7 @@ export default function PostPage() {
   const submitReply = async (parentID: number) => {
     if (!replyText.trim()) return;
 
-    const res = await fetch("http://localhost:8080/logged_in/comments", {
+    const res = await fetch(`${apiUrl}/logged_in/comments`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -308,11 +308,11 @@ export default function PostPage() {
     const fetchPost = async () => {
       setLoading(true);
       try {
-        const res = await fetch(`http://localhost:8080/public/posts/${postID}`);
+        const res = await fetch(`${apiUrl}/public/posts/${postID}`);
         const postJson = await res.json();
 
         const userRes = await fetch(
-          `http://localhost:8080/public/users/${postJson.created_by}`,
+          `${apiUrl}/public/users/${postJson.created_by}`,
           { method: "GET", credentials: "include" }
         );
         const userJson = await userRes.json();
@@ -336,7 +336,7 @@ export default function PostPage() {
     setLoadingComments(true);
     try {
       const res = await fetch(
-        `http://localhost:8080/public/posts/${postID}/comments?page=${commentsPage}&order=DESC`
+        `${apiUrl}/public/posts/${postID}/comments?page=${commentsPage}&order=DESC`
       );
       const json = await res.json();
       if (json.comments.length === 0) {
@@ -346,7 +346,7 @@ export default function PostPage() {
 
       const newComments = await Promise.all(
         (json.comments || []).map(async (c: Comment) => {
-          const userRes = await fetch(`http://localhost:8080/public/users/${c.created_by}`, {
+          const userRes = await fetch(`${apiUrl}/public/users/${c.created_by}`, {
             credentials: "include",
           });
           const userJson = await userRes.json();
@@ -407,12 +407,12 @@ export default function PostPage() {
 
     try {
       const res = await fetch(
-        `http://localhost:8080/public/comments/${parent.id}?page=${parent.replyPage}`
+        `${apiUrl}/public/comments/${parent.id}?page=${parent.replyPage}`
       );
       const json = await res.json();
       const newReplies = await Promise.all(
         (json.comments || []).map(async (c: Comment) => {
-          const userRes = await fetch(`http://localhost:8080/public/users/${c.created_by}`, {
+          const userRes = await fetch(`${apiUrl}/public/users/${c.created_by}`, {
             credentials: "include",
           });
           const userJson = await userRes.json();
@@ -454,7 +454,7 @@ export default function PostPage() {
     const fetchReaction = async () => {
       if (!post) return;
       try {
-        const res = await fetch(`http://localhost:8080/logged_in/posts/${post.id}/reactions`, {
+        const res = await fetch(`${apiUrl}/logged_in/posts/${post.id}/reactions`, {
           method: "GET",
           credentials: "include",
         });
@@ -486,7 +486,7 @@ export default function PostPage() {
 
     try {
       if (userReaction === null) {
-        await fetch(`http://localhost:8080/logged_in/posts/${post.id}/reactions`, {
+        await fetch(`${apiUrl}/logged_in/posts/${post.id}/reactions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reaction: true }),
@@ -495,7 +495,7 @@ export default function PostPage() {
         post.likes++;
         setUserReaction("like");
       } else {
-        await fetch(`http://localhost:8080/logged_in/posts/${post.id}/reactions`, {
+        await fetch(`${apiUrl}/logged_in/posts/${post.id}/reactions`, {
           method: "DELETE",
           credentials: "include",
         });
@@ -518,7 +518,7 @@ export default function PostPage() {
 
     try {
       if (userReaction === null) {
-        await fetch(`http://localhost:8080/logged_in/posts/${post.id}/reactions`, {
+        await fetch(`${apiUrl}/logged_in/posts/${post.id}/reactions`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ reaction: false }),
@@ -527,7 +527,7 @@ export default function PostPage() {
         post.dislikes++;
         setUserReaction("dislike");
       } else {
-        await fetch(`http://localhost:8080/logged_in/posts/${post.id}/reactions`, {
+        await fetch(`${apiUrl}/logged_in/posts/${post.id}/reactions`, {
           method: "DELETE",
           credentials: "include",
         });
@@ -542,7 +542,7 @@ export default function PostPage() {
   const handleSavePost = async () => {
     if (!post) return;
     try {
-      const res = await fetch(`http://localhost:8080/logged_in/posts/${postID}`, {
+      const res = await fetch(`${apiUrl}/logged_in/posts/${postID}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ 
@@ -562,7 +562,7 @@ export default function PostPage() {
   const handleDeletePost = async () => {
     if (!confirm("Are you sure you want to delete this post?")) return;
     try {
-      await fetch(`http://localhost:8080/logged_in/posts/${postID}`, {
+      await fetch(`${apiUrl}/logged_in/posts/${postID}`, {
         method: "DELETE",
         credentials: "include",
       });
@@ -575,7 +575,7 @@ export default function PostPage() {
   const handleDeleteComment = async (commentID: number) => {
     if (!confirm("Are you sure you want to delete this post?")) return;
     try {
-      await fetch(`http://localhost:8080/logged_in/comments/${commentID}`, {
+      await fetch(`${apiUrl}/logged_in/comments/${commentID}`, {
         method: "DELETE",
         credentials: "include",
       });

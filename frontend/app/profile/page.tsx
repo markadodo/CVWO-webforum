@@ -36,7 +36,7 @@ export default function ProfilePage() {
     const fetchProfile = async () => {
       try {
         const res = await fetch(
-          `http://localhost:8080/logged_in/users/${user}`,
+          `${apiUrl}/logged_in/users/${user}`,
           { credentials: "include" }
         );
 
@@ -69,7 +69,7 @@ export default function ProfilePage() {
       }
 
       const res = await fetch(
-        `http://localhost:8080/logged_in/users/${user}`,
+        `${apiUrl}/logged_in/users/${user}`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
