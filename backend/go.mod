@@ -1,6 +1,6 @@
 module backend
 
-go 1.25.5
+go 1.25.0
 
 require (
 	dario.cat/mergo v1.0.2 // indirect

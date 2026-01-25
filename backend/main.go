@@ -1,6 +1,8 @@
 package main
 
 import (
+	"os"
+
 	"github.com/gin-gonic/gin"
 
 	"log"
@@ -29,6 +31,11 @@ func main() {
 	}
 
 	fmt.Println("DB created")
+
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080" // fallback for local testing
+	}
 
 	router := gin.Default()
 
@@ -105,5 +112,5 @@ func main() {
 		protected.GET("/comments/:comment_id/reactions", handlers.ReadCommentReactionHandler(db))
 	}
 
-	router.Run(":8080")
+	router.Run(":" + port)
 }

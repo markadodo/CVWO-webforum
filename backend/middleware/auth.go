@@ -147,7 +147,7 @@ func CheckOwnershipByID(db *sql.DB, fetcher resourceFetcher) gin.HandlerFunc {
 func EnableCORS() gin.HandlerFunc {
 	return func(c *gin.Context) {
 
-		c.Header("Access-Control-Allow-Origin", "http://localhost:3000")
+		c.Header("Access-Control-Allow-Origin", "https://cvwo-chatit.onrender.com")
 		c.Header("Access-Control-Allow-Methods", "POST, GET, PATCH, DELETE, OPTIONS")
 		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		c.Header("Access-Control-Allow-Credentials", "true")
