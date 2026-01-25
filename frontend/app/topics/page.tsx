@@ -47,8 +47,15 @@ export default function TopicsPage() {
   const [query, setQuery] = useState<string | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setQuery(params.get("q"));
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setQuery(params.get("q"));
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    handlePopState();
+
+    return () => window.removeEventListener("popstate", handlePopState);
   }, []);
 
   const [topics, setTopics] = useState<Topic[]>([]);

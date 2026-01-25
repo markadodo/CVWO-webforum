@@ -54,10 +54,18 @@ export default function PostsPage() {
   const [rank, setRank] = useState<"popularity" | "recency" | "views" | null>(null);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    setQuery(params.get("q"));
-    const sortParam = params.get("sort_by") as "popularity" | "recency" | "views" | null;
-    if (sortParam) setRank(sortParam);
+    const updateParams = () => {
+      const params = new URLSearchParams(window.location.search);
+      setQuery(params.get("q"));
+      const sortParam = params.get("sort_by") as "popularity" | "recency" | "views" | null;
+      setRank(sortParam);
+    };
+
+    updateParams();
+
+    window.addEventListener("popstate", updateParams);
+
+    return () => window.removeEventListener("popstate", updateParams);
   }, []);
 
   const fetchPosts = async () => {
