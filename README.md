@@ -29,4 +29,4 @@ cd to frontend, after that run npm install. Env var:
 NEXT_PUBLIC_API_URL=http://localhost:8080(usually),
 Then run npm run dev in terminal and you should be set!
 
-Note that there are some bugs as I was unable to use useSearchParams, dk why. So you might(will) encounter issues when trying to search for posts or topics, basically if it involves changing url path query parameters. This can be fixed by going to another page (different url path) and search function should work. This is only limited to search functions for topics and posts in app bar, search function under a post still works as per normal.
+Note that there are some bugs as I was unable to use useSearchParams, dk why. So you might(will) encounter issues when trying to search for posts or topics, basically if it involves changing url path query parameters. This can be fixed by going to another page (different url path) and search function should work(search posts when you are in topics and search topics when your in posts). This is only limited to search functions for topics and posts in app bar, search function under a post still works as per normal.
