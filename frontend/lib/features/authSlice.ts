@@ -1,11 +1,12 @@
 import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
 //async action to fetch session cookie with the backend
 export const fetchSession = createAsyncThunk(
   "auth/fetchSession",
   async (_, { rejectWithValue }) => {
     try {
-      const res = await fetch("http://localhost:8080/public/auth/loginStatus", {
+      const res = await fetch(`${apiUrl}/public/auth/loginStatus`, {
         credentials: "include",
       });
       const data = await res.json();
