@@ -158,3 +158,24 @@ func DeleteUserByID(db *sql.DB, id int64) (bool, error) {
 func GetUserOwnerByID(db *sql.DB, userID int64) (int64, error) {
 	return userID, nil
 }
+
+func ReadUsernameByID(db *sql.DB, userID int64) (string, error) {
+	var username string
+
+	query := `
+	SELECT username
+	FROM users
+	WHERE id = $1
+	`
+	err := db.QueryRow(query, userID).Scan(&username)
+
+	if err == sql.ErrNoRows {
+		return "", nil
+	}
+
+	if err != nil {
+		return "", err
+	}
+
+	return username, nil
+}

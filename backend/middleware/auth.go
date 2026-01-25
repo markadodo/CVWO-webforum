@@ -3,13 +3,14 @@ package middleware
 import (
 	"backend/auth"
 	"database/sql"
-
+	"log"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
 )
 
+// Mandatory verification of privte routes
 func JWTAuthorisation() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenStr, err := c.Cookie("token")
@@ -40,6 +41,33 @@ func JWTAuthorisation() gin.HandlerFunc {
 			c.JSON(401, gin.H{"error": "Invalid token"})
 			c.Abort()
 			return
+		}
+
+		c.Next()
+	}
+}
+
+// Optional verification for public routes
+func JWTAuthorisationPublic() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		tokenStr, err := c.Cookie("token")
+		if err != nil {
+			log.Println("WHY")
+			c.Next()
+			return
+		}
+
+		token, err := auth.CheckTokenValidity(tokenStr)
+
+		if err != nil || !token.Valid {
+			c.Next()
+			return
+		}
+
+		if claims, match := token.Claims.(jwt.MapClaims); match {
+			if userID, match := claims["user_id"].(float64); match {
+				c.Set("user_id", int64(userID))
+			}
 		}
 
 		c.Next()
@@ -109,6 +137,23 @@ func CheckOwnershipByID(db *sql.DB, fetcher resourceFetcher) gin.HandlerFunc {
 		if currentUserID != ownerUserID {
 			c.JSON(403, gin.H{"error": "Unauthorised"})
 			c.Abort()
+			return
+		}
+
+		c.Next()
+	}
+}
+
+func EnableCORS() gin.HandlerFunc {
+	return func(c *gin.Context) {
+
+		c.Header("Access-Control-Allow-Origin", "http://localhost:3000")
+		c.Header("Access-Control-Allow-Methods", "POST, GET, PATCH, DELETE, OPTIONS")
+		c.Header("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		c.Header("Access-Control-Allow-Credentials", "true")
+
+		if c.Request.Method == "OPTIONS" {
+			c.AbortWithStatus(204)
 			return
 		}
 

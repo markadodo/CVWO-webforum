@@ -20,15 +20,28 @@ func CreateTopicHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		if input.Title == "" || input.Description == "" || input.CreatedBy <= 0 {
+		if input.Title == "" || input.Description == "" {
 			c.JSON(400, gin.H{"error": "empty fields"})
+			return
+		}
+		userIDVal, exists := c.Get("user_id")
+
+		if !exists {
+			c.JSON(401, gin.H{"error": "Not logged in"})
+			return
+		}
+
+		userID, match := userIDVal.(int64)
+
+		if !match {
+			c.JSON(401, gin.H{"error": "Invalid user ID"})
 			return
 		}
 
 		topic := models.Topic{
 			Title:       input.Title,
 			Description: input.Description,
-			CreatedBy:   input.CreatedBy,
+			CreatedBy:   userID,
 		}
 
 		if err := database.CreateTopic(db, &topic); err != nil {

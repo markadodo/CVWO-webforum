@@ -16,12 +16,19 @@ func CreatePostHandler(db *sql.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var input models.CreatePostInput
 
+		topicIDStr := c.Param("topic_id")
+		topicID, err := strconv.ParseInt(topicIDStr, 10, 64)
+		if err != nil || topicID <= 0 {
+			c.JSON(400, gin.H{"error": "Invalid ID"})
+			return
+		}
+
 		if err := c.ShouldBindJSON(&input); err != nil {
 			c.JSON(400, gin.H{"error": "Invalid input"})
 			return
 		}
 
-		if input.Title == "" || input.Description == "" || input.TopicID <= 0 || input.CreatedBy <= 0 {
+		if input.Title == "" || input.Description == "" || input.CreatedBy <= 0 {
 			c.JSON(400, gin.H{"error": "empty fields"})
 			return
 		}
@@ -29,7 +36,7 @@ func CreatePostHandler(db *sql.DB) gin.HandlerFunc {
 		post := models.Post{
 			Title:       input.Title,
 			Description: input.Description,
-			TopicID:     input.TopicID,
+			TopicID:     topicID,
 			CreatedBy:   input.CreatedBy,
 		}
 
@@ -126,6 +133,54 @@ func UpdatePostByIDHandler(db *sql.DB) gin.HandlerFunc {
 
 		if empty_update {
 			c.JSON(400, gin.H{"error": "Empty update"})
+			return
+		}
+
+		if post_not_found {
+			c.JSON(404, gin.H{"error": "Post not found"})
+			return
+		}
+
+		c.JSON(200, gin.H{"status": "Updated successfully"})
+	}
+}
+
+func UpdatePostViewsByIDHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		strid := c.Param("post_id")
+		id, err := strconv.ParseInt(strid, 10, 64)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid ID"})
+			return
+		}
+
+		var input models.UpdatePostInput
+
+		if err := c.ShouldBindJSON(&input); err != nil {
+			c.JSON(400, gin.H{"error": "Invalid input"})
+			return
+		}
+
+		if input.Views != nil && *input.Views < 0 {
+			c.JSON(400, gin.H{"error": "Invalid views input"})
+			return
+		}
+		views := *input.Views
+		if input.Likes != nil && *input.Likes < 0 {
+			c.JSON(400, gin.H{"error": "Invalid likes input"})
+			return
+		}
+		likes := *input.Likes
+		if input.Dislikes != nil && *input.Dislikes < 0 {
+			c.JSON(400, gin.H{"error": "Invalid Dislikes input"})
+			return
+		}
+		dislikes := *input.Dislikes
+
+		post_not_found, err := database.UpdatePostViewsByID(db, id, views, likes, dislikes)
+
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Could not update post"})
 			return
 		}
 
@@ -418,6 +473,44 @@ func DeletePostReactionHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(200, gin.H{"status": "Reaction deleted"})
+	}
+}
+
+func ReadPostReactionHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		postIDStr := c.Param("post_id")
+		postID, err := strconv.ParseInt(postIDStr, 10, 64)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid post id"})
+			return
+		}
+
+		userIDVal, exists := c.Get("user_id")
+
+		if !exists {
+			c.JSON(401, gin.H{"error": "Not logged in"})
+			return
+		}
+
+		userID, match := userIDVal.(int64)
+
+		if !match {
+			c.JSON(401, gin.H{"error": "Invalid user ID"})
+			return
+		}
+
+		reaction, err := database.ReadPostReactionByByPostIDAndUserID(db, postID, userID)
+
+		if err == sql.ErrNoRows {
+			c.JSON(200, gin.H{"reaction": nil})
+			return
+		}
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Could not get reaction"})
+			return
+		}
+
+		c.JSON(200, gin.H{"reaction": reaction})
 	}
 }
 

@@ -12,6 +12,7 @@ type Comment struct {
 	ParentCommentID *int64    `json:"parent_comment_id"`
 	CreatedBy       int64     `json:"created_by"`
 	CreatedAt       time.Time `json:"created_at"`
+	Username        string    `json:"username"`
 }
 
 type CreateCommentInput struct {

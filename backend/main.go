@@ -1,97 +1,5 @@
 package main
 
-// import (
-// 	// "net/http"
-
-// 	"github.com/gin-gonic/gin"
-
-// 	"log"
-
-// 	"fmt"
-
-// 	"backend/database"
-// 	"backend/handlers"
-// 	"backend/middleware"
-
-// 	_ "github.com/lib/pq"
-// )
-
-// func main() {
-// 	db, err := database.ConnectDB()
-
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	defer db.Close()
-
-// 	fmt.Println("db working")
-
-// 	err = database.InitDB(db)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-
-// 	fmt.Println("db created")
-
-// 	test := gin.Default()
-
-// 	test.POST("/login", handlers.LoginHandler(db))
-// 	test.GET("/topics/:topic_id/posts", handlers.ReadPostByTopicIDHandler(db))
-// 	test.GET("/posts/:post_id/comments", handlers.ReadCommentByPostIDHandler(db))
-// 	test.POST("/users", handlers.CreateUserHandler(db))
-// 	test.GET("/topics/:topic_id/posts/search", handlers.ReadPostBySearchQueryHandler(db))
-// 	test.GET("/topics", handlers.ReadTopicHandler(db))
-// 	test.GET("/posts", handlers.ReadPostHandler(db))
-
-// 	r := test.Group("/logged_in")
-
-// 	r.Use(middleware.JWTAuthorisation())
-// 	{
-// 		r.POST("/users", handlers.CreateUserHandler(db))
-
-// 		r.GET("/users/:user_id", middleware.CheckOwnershipByID(db, database.GetUserOwnerByID), handlers.ReadUserByIDHandler(db))
-
-// 		r.PATCH("/users/:user_id", handlers.UpdateUserByIDHandler(db))
-
-// 		r.DELETE("/users/:user_id", handlers.DeleteUserByIDHandler(db))
-
-// 		r.POST("/topics", handlers.CreateTopicHandler(db))
-
-// 		r.GET("/topics/:topic_id", middleware.CheckOwnershipByID(db, database.GetTopicOwnerByID), handlers.ReadTopicByIDHandler(db))
-
-// 		r.PATCH("/topics/:topic_id", handlers.UpdateTopicByIDHandler(db))
-
-// 		r.DELETE("/topics/:topic_id", handlers.DeleteTopicByIDHandler(db))
-
-// 		r.POST("/posts", handlers.CreatePostHandler(db))
-
-// 		r.GET("/posts/:post_id", handlers.ReadPostByIDHandler(db))
-
-// 		r.PATCH("/posts/:post_id", handlers.UpdatePostByIDHandler(db))
-
-// 		r.DELETE("/posts/:post_id", handlers.DeletePostByIDHandler(db))
-
-// 		r.POST("/comments", handlers.CreateCommentHandler(db))
-
-// 		r.GET("/comments/:comment_id", handlers.ReadCommentByIDHandler(db))
-
-// 		r.PATCH("/comments/:comment_id", handlers.UpdateCommentByIDHandler(db))
-
-// 		r.DELETE("/comments/:comment_id", handlers.DeleteCommentByIDHandler(db))
-
-// 		r.POST("/posts/:post_id/reaction", handlers.CreatePostReactionHandler(db))
-
-// 		r.DELETE("/posts/:post_id/reaction", handlers.DeletePostReactionHandler(db))
-
-// 		r.POST("/comments/:comment_id/reaction", handlers.CreateCommentReactionHandler(db))
-
-// 		r.DELETE("/comments/:comment_id/reaction", handlers.DeleteCommentReactionHandler(db))
-// 	}
-
-// 	test.Run(":8080")
-// }
-
 import (
 	"github.com/gin-gonic/gin"
 
@@ -102,102 +10,100 @@ import (
 	"backend/database"
 	"backend/handlers"
 	"backend/middleware"
-	"context"
-	"database/sql"
 
 	_ "github.com/lib/pq"
-	"github.com/testcontainers/testcontainers-go"
-	"github.com/testcontainers/testcontainers-go/modules/postgres"
-	"github.com/testcontainers/testcontainers-go/wait"
 )
 
 func main() {
-	ctx := context.Background()
-
-	pgContainer, err := postgres.Run(ctx,
-		"postgres:16-alpine",
-		postgres.WithDatabase("testdb"),
-		postgres.WithUsername("test"),
-		postgres.WithPassword("test"),
-		testcontainers.WithWaitStrategy(
-			wait.ForLog("database system is ready to accept connections").
-				WithOccurrence(2),
-		),
-	)
-
-	connStr, err := pgContainer.ConnectionString(ctx, "sslmode=disable")
-
-	db, err := sql.Open("postgres", connStr)
-
+	db, err := database.ConnectDB()
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	defer db.Close()
 
-	fmt.Println("db working")
+	log.Println("Connected to Postgres")
 
 	err = database.InitDB(db)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	fmt.Println("db created")
+	fmt.Println("DB created")
 
-	test := gin.Default()
+	router := gin.Default()
 
-	test.POST("/login", handlers.LoginHandler(db))
-	test.GET("/topics/:topic_id/posts", handlers.ReadPostByTopicIDHandler(db))
-	test.GET("/posts/:post_id/comments", handlers.ReadCommentByPostIDHandler(db))
-	test.POST("/users", handlers.CreateUserHandler(db))
-	test.GET("/topics/:topic_id/posts/search", handlers.ReadPostBySearchQueryHandler(db))
-	test.GET("/topics", handlers.ReadTopicHandler(db))
-	test.GET("/posts", handlers.ReadPostHandler(db))
+	routes := router.Group("/")
+	routes.Use(middleware.EnableCORS())
 
-	r := test.Group("/logged_in")
+	// Catching OPTIONS
+	routes.OPTIONS("/*path")
 
-	r.Use(middleware.JWTAuthorisation())
+	// PUBLIC ROUTES (No Authentication Required)
+	public := routes.Group("/public")
+	public.Use(middleware.JWTAuthorisationPublic())
 	{
-		r.POST("/users", handlers.CreateUserHandler(db))
+		//Return User ID
+		public.GET("/auth/loginStatus", handlers.ReadLoggedInUserID(db))
 
-		r.GET("/users/:user_id", middleware.CheckOwnershipByID(db, database.GetUserOwnerByID), handlers.ReadUserByIDHandler(db))
+		// Authentication Routes
+		public.POST("/auth/register", handlers.CreateUserHandler(db))
+		public.POST("/auth/login", handlers.LoginHandler(db))
+		public.POST("/auth/logout", handlers.LogoutHandler(db))
 
-		r.PATCH("/users/:user_id", handlers.UpdateUserByIDHandler(db))
+		// User Routes - Read Only
+		public.GET("/users/:user_id", handlers.ReadUsernameByIDHandler(db))
 
-		r.DELETE("/users/:user_id", handlers.DeleteUserByIDHandler(db))
+		// Topic Routes - Read Only
+		public.GET("/topics", handlers.ReadTopicHandler(db))
+		public.GET("/topics/:topic_id", handlers.ReadTopicByIDHandler(db))
+		public.GET("/topics/search", handlers.ReadTopicBySearchQueryHandler(db))
 
-		r.POST("/topics", handlers.CreateTopicHandler(db))
+		// Post Routes - Read Only (Public Feed)
+		public.GET("/posts", handlers.ReadPostHandler(db))
+		public.GET("/posts/:post_id", handlers.ReadPostByIDHandler(db))
+		public.PATCH("/posts/:post_id", handlers.UpdatePostViewsByIDHandler(db))
+		public.GET("/topics/:topic_id/posts", handlers.ReadPostByTopicIDHandler(db))
+		public.GET("/topics/:topic_id/posts/search", handlers.ReadPostBySearchQueryHandler(db))
 
-		r.GET("/topics/:topic_id", middleware.CheckOwnershipByID(db, database.GetTopicOwnerByID), handlers.ReadTopicByIDHandler(db))
-
-		r.PATCH("/topics/:topic_id", handlers.UpdateTopicByIDHandler(db))
-
-		r.DELETE("/topics/:topic_id", handlers.DeleteTopicByIDHandler(db))
-
-		r.POST("/posts", handlers.CreatePostHandler(db))
-
-		r.GET("/posts/:post_id", handlers.ReadPostByIDHandler(db))
-
-		r.PATCH("/posts/:post_id", handlers.UpdatePostByIDHandler(db))
-
-		r.DELETE("/posts/:post_id", handlers.DeletePostByIDHandler(db))
-
-		r.POST("/comments", handlers.CreateCommentHandler(db))
-
-		r.GET("/comments/:comment_id", handlers.ReadCommentByIDHandler(db))
-
-		r.PATCH("/comments/:comment_id", handlers.UpdateCommentByIDHandler(db))
-
-		r.DELETE("/comments/:comment_id", handlers.DeleteCommentByIDHandler(db))
-
-		r.POST("/posts/:post_id/reaction", handlers.CreatePostReactionHandler(db))
-
-		r.DELETE("/posts/:post_id/reaction", handlers.DeletePostReactionHandler(db))
-
-		r.POST("/comments/:comment_id/reaction", handlers.CreateCommentReactionHandler(db))
-
-		r.DELETE("/comments/:comment_id/reaction", handlers.DeleteCommentReactionHandler(db))
+		// Comment Routes - Read Only
+		public.GET("/posts/:post_id/comments", handlers.ReadCommentByPostIDHandler(db))
+		public.GET("/comments/:parent_comment_id", handlers.ReadCommentByParentCommentIDHandler(db))
 	}
 
-	test.Run(":8080")
+	// PROTECTED ROUTES (Authentication Required)
+	protected := routes.Group("/logged_in")
+	protected.Use(middleware.JWTAuthorisation())
+	{
+		// USER CRUD
+		protected.GET("/users/:user_id", middleware.CheckOwnershipByID(db, database.GetUserOwnerByID), handlers.ReadUserByIDHandler(db))
+		protected.PATCH("/users/:user_id", middleware.CheckOwnershipByID(db, database.GetUserOwnerByID), handlers.UpdateUserByIDHandler(db))
+		protected.DELETE("/users/:user_id", middleware.CheckOwnershipByID(db, database.GetUserOwnerByID), handlers.DeleteUserByIDHandler(db))
+
+		//TOPIC CRUD
+		protected.POST("/topics", handlers.CreateTopicHandler(db))
+		protected.PATCH("/topics/:topic_id", middleware.CheckOwnershipByID(db, database.GetTopicOwnerByID), handlers.UpdateTopicByIDHandler(db))
+		protected.DELETE("/topics/:topic_id", middleware.CheckOwnershipByID(db, database.GetTopicOwnerByID), handlers.DeleteTopicByIDHandler(db))
+
+		//POST CRUD
+		protected.POST("topics/:topic_id/posts", handlers.CreatePostHandler(db))
+		protected.PATCH("/posts/:post_id", middleware.CheckOwnershipByID(db, database.GetPostOwnerByID), handlers.UpdatePostByIDHandler(db))
+		protected.DELETE("/posts/:post_id", middleware.CheckOwnershipByID(db, database.GetPostOwnerByID), handlers.DeletePostByIDHandler(db))
+
+		//COMMENT CRUD
+		protected.POST("/comments", handlers.CreateCommentHandler(db))
+		protected.PATCH("/comments/:comment_id", middleware.CheckOwnershipByID(db, database.GetCommentOwnerByID), handlers.UpdateCommentByIDHandler(db))
+		protected.DELETE("/comments/:comment_id", middleware.CheckOwnershipByID(db, database.GetCommentOwnerByID), handlers.DeleteCommentByIDHandler(db))
+
+		//POST REACTIONS
+		protected.POST("/posts/:post_id/reactions", handlers.CreatePostReactionHandler(db))
+		protected.DELETE("/posts/:post_id/reactions", handlers.DeletePostReactionHandler(db))
+		protected.GET("/posts/:post_id/reactions", handlers.ReadPostReactionHandler(db))
+
+		//COMMENT REACTIONS
+		protected.POST("/comments/:comment_id/reactions", handlers.CreateCommentReactionHandler(db))
+		protected.DELETE("/comments/:comment_id/reactions", handlers.DeleteCommentReactionHandler(db))
+		protected.GET("/comments/:comment_id/reactions", handlers.ReadCommentReactionHandler(db))
+	}
+
+	router.Run(":8080")
 }

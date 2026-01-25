@@ -22,16 +22,17 @@ func CreatePost(db *sql.DB, post *models.Post) error {
 		created_by,
 		created_at
 	)
-	VALUES ($1, $2, $3, $4, $5);
+	VALUES ($1, $2, $3, $4, $5)
+	RETURNING id;
 	`
-	_, err := db.Exec(
+	err := db.QueryRow(
 		query,
 		post.Title,
 		post.Description,
 		post.TopicID,
 		post.CreatedBy,
 		post.CreatedAt,
-	)
+	).Scan(&post.ID)
 
 	if err != nil {
 		return err
@@ -125,6 +126,27 @@ func UpdatePostByID(db *sql.DB, id int64, input *models.UpdatePostInput) (bool, 
 	}
 
 	return false, false, nil
+}
+
+func UpdatePostViewsByID(db *sql.DB, id int64, views int, likes int, dislikes int) (bool, error) {
+	query := `
+	UPDATE posts 
+    SET views = $1, popularity = $2 
+	WHERE id = $3`
+
+	popularity := 10*likes - 5*dislikes + views
+
+	res, err := db.Exec(query, views, popularity, id)
+
+	if err != nil {
+		return false, err
+	}
+
+	if count, _ := res.RowsAffected(); count == 0 {
+		return true, nil
+	}
+
+	return false, nil
 }
 
 func DeletePostByID(db *sql.DB, id int64) (bool, error) {
@@ -283,6 +305,24 @@ func DeletePostReactionByPostIDAndUserID(db *sql.DB, postID int64, userID int64)
 	}
 
 	return false, nil
+}
+
+func ReadPostReactionByByPostIDAndUserID(db *sql.DB, postID int64, userID int64) (bool, error) {
+	query := `
+	SELECT reaction 
+	FROM posts_reactions
+	WHERE post_id = $1 AND user_id = $2
+	`
+	var reaction bool
+
+	err := db.QueryRow(query, postID, userID).Scan(&reaction)
+
+	if err != nil {
+		return false, err
+	}
+
+	return reaction, nil
+
 }
 
 func ReadPost(db *sql.DB, limit int, offset int, sortBy string, order string) ([]models.Post, error) {

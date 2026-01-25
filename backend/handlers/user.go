@@ -144,3 +144,30 @@ func DeleteUserByIDHandler(db *sql.DB) gin.HandlerFunc {
 		c.JSON(200, gin.H{"status": "User deleted"})
 	}
 }
+
+func ReadUsernameByIDHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		strid := c.Param("user_id")
+		id, err := strconv.ParseInt(strid, 10, 64)
+
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid ID"})
+			return
+		}
+
+		username, err := database.ReadUsernameByID(db, id)
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		if username == "" {
+			c.JSON(404, gin.H{"error": "User not found"})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"username": username,
+		})
+	}
+}

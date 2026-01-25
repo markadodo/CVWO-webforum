@@ -10,27 +10,27 @@ import (
 )
 
 func CreateComment(db *sql.DB, comment *models.Comment) error {
-
 	comment.CreatedAt = time.Now()
 
 	query := `
-	INSERT INTO comments (
-		description,
-		post_id,
-		parent_comment_id,
-		created_by,
-		created_at
-	)
-	VALUES ($1, $2, $3, $4, $5);
-	`
-	_, err := db.Exec(
+    INSERT INTO comments (
+        description,
+        post_id,
+        parent_comment_id,
+        created_by,
+        created_at
+    )
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING id;
+    `
+	err := db.QueryRow(
 		query,
 		comment.Description,
 		comment.PostID,
 		comment.ParentCommentID,
 		comment.CreatedBy,
 		comment.CreatedAt,
-	)
+	).Scan(&comment.ID)
 
 	if err != nil {
 		return err
@@ -149,7 +149,7 @@ func ReadCommentByPostID(db *sql.DB, postID int64, limit int, offset int, sortBy
 	query := `
 	SELECT id, description, likes, dislikes, is_edited, post_id, parent_comment_id, created_by, created_at
 	FROM comments
-	WHERE post_id = $1
+	WHERE post_id = $1 AND parent_comment_id IS NULL
 	ORDER BY ` + sortBy + " " + order + `
 	LIMIT $2 OFFSET $3`
 
@@ -172,6 +172,11 @@ func ReadCommentByPostID(db *sql.DB, postID int64, limit int, offset int, sortBy
 		if err := rows.Scan(&comment.ID, &comment.Description, &comment.Likes, &comment.Dislikes, &comment.IsEdited, &comment.PostID, &comment.ParentCommentID, &comment.CreatedBy, &comment.CreatedAt); err != nil {
 			return comments, err
 		}
+		username, err := ReadUsernameByID(db, comment.CreatedBy)
+		if err != nil {
+			return comments, err
+		}
+		comment.Username = username
 
 		comments = append(comments, comment)
 	}
@@ -219,4 +224,62 @@ func DeleteCommentReactionByCommentIDAndUserID(db *sql.DB, commentID int64, user
 	}
 
 	return false, nil
+}
+
+func ReadCommentReactionByByCommentIDAndUserID(db *sql.DB, commentID int64, userID int64) (bool, error) {
+	query := `
+	SELECT reaction 
+	FROM comments_reactions
+	WHERE comment_id = $1 AND user_id = $2
+	`
+	var reaction bool
+
+	err := db.QueryRow(query, commentID, userID).Scan(&reaction)
+
+	if err != nil {
+		return false, err
+	}
+
+	return reaction, nil
+
+}
+
+func ReadCommentByParentCommentID(db *sql.DB, parentCommentID *int64, limit int, offset int, sortBy string, order string) ([]models.Comment, error) {
+	var comments []models.Comment
+
+	query := `
+	SELECT id, description, likes, dislikes, is_edited, post_id, parent_comment_id, created_by, created_at
+	FROM comments
+	WHERE parent_comment_id = $1
+	ORDER BY ` + sortBy + " " + order + `
+	LIMIT $2 OFFSET $3`
+
+	rows, err := db.Query(
+		query,
+		parentCommentID,
+		limit,
+		offset,
+	)
+
+	if err != nil {
+		return comments, err
+	}
+
+	defer rows.Close()
+
+	for rows.Next() {
+		var comment models.Comment
+
+		if err := rows.Scan(&comment.ID, &comment.Description, &comment.Likes, &comment.Dislikes, &comment.IsEdited, &comment.PostID, &comment.ParentCommentID, &comment.CreatedBy, &comment.CreatedAt); err != nil {
+			return comments, err
+		}
+
+		comments = append(comments, comment)
+	}
+
+	if err := rows.Err(); err != nil {
+		return comments, err
+	}
+
+	return comments, nil
 }

@@ -1,0 +1,25 @@
+.layout {
+    display: flex;
+    flex-direction: column;
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    background-color: #f8f8f8;
+}
+
+.main-content {
+    display: flex;
+}
+
+.left-nav {
+    width: 200px;
+    padding: 10px;
+    background-color: #f0f0f0;
+}
+
+.auth-buttons button {
+    margin-left: 10px;
+}

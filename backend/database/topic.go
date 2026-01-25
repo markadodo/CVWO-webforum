@@ -19,15 +19,16 @@ func CreateTopic(db *sql.DB, topic *models.Topic) error {
 		created_by,
 		created_at
 	)
-	VALUES ($1, $2, $3, $4);
+	VALUES ($1, $2, $3, $4)
+	RETURNING id;
 	`
-	_, err := db.Exec(
+	err := db.QueryRow(
 		query,
 		topic.Title,
 		topic.Description,
 		topic.CreatedBy,
 		topic.CreatedAt,
-	)
+	).Scan(&topic.ID)
 
 	if err != nil {
 		return err

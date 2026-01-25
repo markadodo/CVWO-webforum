@@ -118,7 +118,10 @@ func InitDB(db *sql.DB) error {
 	BEGIN
 		UPDATE posts SET
 			likes = likes + CASE WHEN new.reaction = TRUE THEN 1 ELSE 0 END,
-			dislikes = dislikes + CASE WHEN new.reaction = FALSE THEN 1 ELSE 0 END
+			dislikes = dislikes + CASE WHEN new.reaction = FALSE THEN 1 ELSE 0 END,
+			popularity = (likes + CASE WHEN new.reaction = TRUE THEN 1 ELSE 0 END) * 10
+                            - (dislikes + CASE WHEN new.reaction = FALSE THEN 1 ELSE 0 END) * 5
+                            + views
 		WHERE posts.id = new.post_id;
 
 		return new;
@@ -131,7 +134,10 @@ func InitDB(db *sql.DB) error {
 	BEGIN
 		UPDATE posts SET
 			likes = likes - CASE WHEN old.reaction = TRUE THEN 1 ELSE 0 END,
-			dislikes = dislikes - CASE WHEN old.reaction = FALSE THEN 1 ELSE 0 END
+			dislikes = dislikes - CASE WHEN old.reaction = FALSE THEN 1 ELSE 0 END,
+			popularity = (likes - CASE WHEN old.reaction = TRUE THEN 1 ELSE 0 END) * 10
+                            - (dislikes - CASE WHEN old.reaction = FALSE THEN 1 ELSE 0 END) * 5
+                            + views
 		WHERE posts.id = old.post_id;
 
 		return old;

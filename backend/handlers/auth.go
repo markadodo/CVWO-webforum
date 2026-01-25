@@ -37,7 +37,7 @@ func LoginHandler(db *sql.DB) gin.HandlerFunc {
 		userID, err := auth.CheckLoginValidity(userData, &loginData)
 
 		if err != nil {
-			c.JSON(400, gin.H{"error": "Password wrong"})
+			c.JSON(400, gin.H{"error": "Wrong password"})
 			return
 		}
 
@@ -49,11 +49,9 @@ func LoginHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		var current_status bool = false
-		var domain string = "localhost"
 
 		if status := os.Getenv("STATUS"); status == "deployment" {
 			current_status = true
-			domain = ""
 		}
 
 		c.SetCookie(
@@ -61,11 +59,48 @@ func LoginHandler(db *sql.DB) gin.HandlerFunc {
 			tokenStr,
 			3600,
 			"/",
-			domain,
+			"",
 			current_status,
 			true,
 		)
 
 		c.JSON(200, gin.H{"user_id": userID})
+	}
+}
+
+func LogoutHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		c.SetCookie("token", "", -1, "/", "", false, true)
+		c.JSON(200, gin.H{"status": "Logged out"})
+	}
+}
+
+func ReadLoggedInUserID(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if userIDval, exists := c.Get("user_id"); exists {
+			userID := userIDval.(int64)
+			user, err := database.ReadUserByID(db, userID)
+
+			if err != nil {
+				c.JSON(500, gin.H{"error": "Internal server error"})
+				return
+			}
+
+			if user == nil {
+				c.JSON(404, gin.H{"error": "User not found"})
+				return
+			}
+			c.JSON(200, gin.H{
+				"logged_in": true,
+				"user_id":   userID,
+				"username":  user.Username,
+			})
+		} else {
+			c.JSON(400, gin.H{
+				"logged_in": false,
+				"user_id":   -1,
+				"username":  "",
+			})
+		}
 	}
 }

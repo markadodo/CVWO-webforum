@@ -5,6 +5,7 @@ import (
 	"backend/models"
 	"database/sql"
 	"errors"
+	"log"
 
 	"strconv"
 
@@ -16,11 +17,26 @@ func CreateCommentHandler(db *sql.DB) gin.HandlerFunc {
 		var input models.CreateCommentInput
 
 		if err := c.ShouldBindJSON(&input); err != nil {
+			log.Println("here")
 			c.JSON(400, gin.H{"error": "Invalid input"})
 			return
 		}
 
-		if input.Description == "" || input.PostID <= 0 || (input.ParentCommentID != nil && *input.ParentCommentID <= 0) || input.CreatedBy <= 0 {
+		userIDVal, exists := c.Get("user_id")
+
+		if !exists {
+			c.JSON(401, gin.H{"error": "Not logged in"})
+			return
+		}
+
+		userID, match := userIDVal.(int64)
+
+		if !match {
+			c.JSON(401, gin.H{"error": "Invalid user ID"})
+			return
+		}
+
+		if input.Description == "" || input.PostID <= 0 || (input.ParentCommentID != nil && *input.ParentCommentID <= 0) {
 			c.JSON(400, gin.H{"error": "empty fields"})
 			return
 		}
@@ -29,7 +45,7 @@ func CreateCommentHandler(db *sql.DB) gin.HandlerFunc {
 			Description:     input.Description,
 			PostID:          input.PostID,
 			ParentCommentID: input.ParentCommentID,
-			CreatedBy:       input.CreatedBy,
+			CreatedBy:       userID,
 		}
 
 		if err := database.CreateComment(db, &comment); err != nil {
@@ -397,5 +413,129 @@ func DeleteCommentReactionHandler(db *sql.DB) gin.HandlerFunc {
 		}
 
 		c.JSON(200, gin.H{"status": "Reaction deleted"})
+	}
+}
+
+func ReadCommentReactionHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		commentIDStr := c.Param("comment_id")
+		commentID, err := strconv.ParseInt(commentIDStr, 10, 64)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid comment id"})
+			return
+		}
+
+		if commentID <= 0 {
+			c.JSON(400, gin.H{"error": "Invalid comment ID"})
+			return
+		}
+
+		userIDVal, exists := c.Get("user_id")
+
+		if !exists {
+			c.JSON(401, gin.H{"error": "Not logged in"})
+			return
+		}
+
+		userID, match := userIDVal.(int64)
+
+		if !match {
+			c.JSON(401, gin.H{"error": "Invalid user ID"})
+			return
+		}
+
+		reaction, err := database.ReadCommentReactionByByCommentIDAndUserID(db, commentID, userID)
+
+		if err == sql.ErrNoRows {
+			c.JSON(200, gin.H{"reaction": nil})
+			return
+		}
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Could not get reaction"})
+			return
+		}
+
+		c.JSON(200, gin.H{"reaction": reaction})
+	}
+}
+
+func ReadCommentByParentCommentIDHandler(db *sql.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		parentCommentIDStr := c.Param("parent_comment_id")
+		var parentCommentID *int64
+		if parentCommentIDStr != "" {
+			parentCommentIDInt, err := strconv.ParseInt(parentCommentIDStr, 10, 64)
+			if err != nil || parentCommentIDInt <= 0 {
+				c.JSON(400, gin.H{"error": "Invalid ID"})
+				return
+			}
+			parentCommentID = &parentCommentIDInt
+		} else {
+			parentCommentID = nil
+		}
+
+		pageStr := c.DefaultQuery("page", "1")
+		limitStr := c.DefaultQuery("limit", "10")
+
+		page, err := strconv.Atoi(pageStr)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid page"})
+			return
+		}
+
+		limit, err := strconv.Atoi(limitStr)
+		if err != nil {
+			c.JSON(400, gin.H{"error": "Invalid limit"})
+			return
+		}
+
+		if page <= 0 {
+			page = 1
+		}
+
+		if limit < 10 || limit >= 100 {
+			limit = 10
+		}
+
+		offset := (page - 1) * limit
+
+		sortBy := c.DefaultQuery("sort_by", "created_at")
+		order := c.DefaultQuery("order", "DESC")
+
+		if sortBy != "created_at" && sortBy != "likes" {
+			sortBy = "created_at"
+		}
+
+		if order != "ASC" && order != "DESC" {
+			order = "DESC"
+		}
+
+		commentsData, err := database.ReadCommentByParentCommentID(db, parentCommentID, limit, offset, sortBy, order)
+
+		if err != nil {
+			c.JSON(500, gin.H{"error": "Internal server error"})
+			return
+		}
+
+		if len(commentsData) == 0 {
+			c.JSON(200, gin.H{
+				"count":    0,
+				"page":     page,
+				"limit":    limit,
+				"sort_by":  sortBy,
+				"order":    order,
+				"comments": []models.Comment{},
+			})
+			return
+		}
+
+		c.JSON(200, gin.H{
+			"count":    len(commentsData),
+			"page":     page,
+			"limit":    limit,
+			"sort_by":  sortBy,
+			"order":    order,
+			"comments": commentsData,
+		})
 	}
 }
