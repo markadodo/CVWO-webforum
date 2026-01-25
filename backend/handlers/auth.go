@@ -2,8 +2,7 @@ package handlers
 
 import (
 	"database/sql"
-
-	"os"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 
@@ -48,11 +47,7 @@ func LoginHandler(db *sql.DB) gin.HandlerFunc {
 			return
 		}
 
-		var current_status bool = false
-
-		if status := os.Getenv("STATUS"); status == "deployment" {
-			current_status = true
-		}
+		c.SetSameSite(http.SameSiteNoneMode)
 
 		c.SetCookie(
 			"token",
@@ -60,7 +55,7 @@ func LoginHandler(db *sql.DB) gin.HandlerFunc {
 			3600,
 			"/",
 			"",
-			current_status,
+			true,
 			true,
 		)
 
